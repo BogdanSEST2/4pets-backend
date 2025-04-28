@@ -1,5 +1,7 @@
 import pytest
 from app import create_app, db
+from app.models.user import User
+
 
 
 
@@ -15,25 +17,21 @@ def app():
         db.drop_all()
 
 
-
 @pytest.fixture
 def client(app):
     return app.test_client()
 
 
-
-def test_get_users_empty(client):
-    response = client.get('/user/users')
-    assert response.status_code == 200
+def test_register_user(client):
+    response = client.post('/auth/register', json={"username": "testuser", "password": "testpass"})
+    assert response.status_code == 201
     data = response.get_json()
-    assert data == []
+    assert data["message"] == "Регистрация успешна"
 
 
-
-def test_get_users_after_registration(client):
+def test_login_user(client):
     client.post('/auth/register', json={"username": "testuser", "password": "testpass"})
-    response = client.get('/user/users')
+    response = client.post('/auth/login', json={"username": "testuser", "password": "testpass"})
     assert response.status_code == 200
     data = response.get_json()
-    assert len(data) == 1
-    assert data[0]["username"] == "testuser"
+    assert "access_token" in data

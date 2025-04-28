@@ -1,8 +1,8 @@
 import os
+from .config import Config
 
 
-class DevelopmentConfig:
+
+class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv('SECRET_KEY', 'fallback_secret')
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'fallback_jwt_secret')
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///dev_db.sqlite3')
