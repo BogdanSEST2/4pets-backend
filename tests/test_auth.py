@@ -1,37 +1,66 @@
 import pytest
-from app import create_app, db
 from app.models.user import User
+from app.extensions import db
+from app.utils.response import error_response
 
 
 
 
 @pytest.fixture
-def app():
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()
+def user_data():
+    return {
+        "username": "testuser",
+        "password": "TestPassword123!"
+    }
 
 
-@pytest.fixture
-def client(app):
-    return app.test_client()
+def test_register_user(client, user_data):
+    response = client.post('/auth/register', json=user_data)
+    json_data = response.get_json()
 
-
-def test_register_user(client):
-    response = client.post('/auth/register', json={"username": "testuser", "password": "testpass"})
     assert response.status_code == 201
-    data = response.get_json()
-    assert data["message"] == "Регистрация успешна"
+    assert json_data["status"] == "success"
+    assert json_data["message"] == "Регистрация успешна"
 
 
-def test_login_user(client):
-    client.post('/auth/register', json={"username": "testuser", "password": "testpass"})
-    response = client.post('/auth/login', json={"username": "testuser", "password": "testpass"})
+def test_register_existing_user(client, user_data):
+    client.post('/auth/register', json=user_data)
+    response = client.post('/auth/register', json=user_data)
+    json_data = response.get_json()
+
+    assert response.status_code == 409
+    assert json_data["status"] == "error"
+    assert json_data["message"] == "Пользователь уже существует"
+
+
+
+def test_login_user(client, user_data):
+    client.post('/auth/register', json=user_data)
+    response = client.post('/auth/login', json=user_data)
+    json_data = response.get_json()
+
     assert response.status_code == 200
-    data = response.get_json()
-    assert "access_token" in data
+    assert json_data["status"] == "success"
+    assert "token" in json_data["data"]
+
+
+def test_login_invalid_credentials(client):
+    response = client.post('/auth/login', json={
+        "username": "wronguser",
+        "password": "wrongpassword"
+    })
+    json_data = response.get_json()
+
+    assert response.status_code == 401
+    assert json_data["status"] == "error"
+
+
+def test_register_and_login(client):
+    user = {"username": "john", "password": "Secret123!"}
+    r1 = client.post("/auth/register", json=user)
+    assert r1.status_code == 201
+
+    r2 = client.post("/auth/login", json=user)
+    data = r2.get_json()
+    assert r2.status_code == 200
+    assert "token" in data["data"]
