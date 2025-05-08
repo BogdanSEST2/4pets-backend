@@ -4,6 +4,8 @@ from .extensions import db, migrate, jwt
 from dotenv import load_dotenv
 from app.routes import register_routes
 
+
+
 def create_app(config_name=None):
     app = Flask(__name__)
     load_dotenv()
